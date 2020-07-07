@@ -64,8 +64,63 @@ void getDumpsList() {
 
   String out;
   serializeJson(doc, out);
+  doc.clear();
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "application/json", out);
+}
+
+void getEnv() {
+  const size_t capacity = 0x1fff;
+  DynamicJsonDocument doc(capacity);
+
+  doc["version"] = VERSION;
+  doc["maximages"] = MAX_IMAGES;
+
+  #ifdef ESP8266
+  doc["env"] = "esp8266";
+  #else
+  doc["env"] = "unknown";
+  #endif
+
+  #ifdef FSTYPE_LITTLEFS
+  doc["fstype"] = "littlefs";
+  #else
+  doc["fstype"] = "spiffs";
+  #endif
+
+  #ifdef SENSE_BOOT_MODE
+  doc["bootmode"] = "5v-sense";
+  #else
+  doc["bootmode"] = "alternating";
+  #endif
+
+  #ifdef USE_OLED
+  doc["oled"] = true;
+  #else
+  doc["oled"] = false;
+  #endif
+
+  String out;
+  serializeJson(doc, out);
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", out);
+}
+
+void getConfig() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", wifiGetConfig());
+}
+
+void setConfig() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+
+  // Check if body received
+  if (server.hasArg("plain") == false) {
+    server.send(200, "application/json", JsonErrorResponse("empty request"));
+    return;
+  }
+
+  server.send(200, "application/json", wifiSetConfig(server.arg("plain")));
 }
 
 // stream binary dump data to web-client
@@ -121,6 +176,9 @@ String getContentType(String filename) {
 void webserver_setup() {
   server.on("/dumps/clear", clearDumps);
   server.on("/dumps/list", getDumpsList);
+  server.on("/wificonfig/get", getConfig);
+  server.on("/wificonfig/set", setConfig);
+  server.on("/env.json", getEnv);
 
   #ifdef FSTYPE_LITTLEFS
     server.on(UriBraces("/dumps/{}"), handleDump);

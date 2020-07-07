@@ -1,4 +1,6 @@
-#include "websocket-gbp-emulator.h"
+#include "wifi-gbp-emulator.h"
+
+#define VERSION "0.3.1"
 
 // Variables used across multiple files, so they need to be defined here
 String mdnsName = DEFAULT_MDNS_NAME;
@@ -63,7 +65,7 @@ void loop() {
 
   #ifdef SENSE_BOOT_MODE
   if (bootMode != digitalRead(GB_5V_OUT)) {
-   ESP.restart();
+    ESP.restart();
   }
   #endif
 }

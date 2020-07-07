@@ -1,6 +1,13 @@
 
 ESP8266WiFiMulti wifiMulti;
 
+void createEmptyConfig() {
+  Serial.println("Preparing empty conf.json. \nYou can configure WiFi-Settings via the web interface.");
+  File confFileEmpty = FS.open("/conf.json", "w");
+  confFileEmpty.println("{}");
+  confFileEmpty.close();
+}
+
 void setupWifi() {
   StaticJsonDocument<1023> conf;
   File confFile = FS.open("/conf.json", "r");
@@ -11,7 +18,9 @@ void setupWifi() {
 
     if (!error) {
       if (conf.containsKey("mdns")) {
-        mdnsName = String(conf["mdns"].as<String>());
+        if (String(conf["mdns"].as<String>()) != "") {
+          mdnsName = String(conf["mdns"].as<String>());
+        }
       }
 
       if (conf.containsKey("networks")) {
@@ -20,7 +29,7 @@ void setupWifi() {
           const char *ssid = networkSetting["ssid"].as<const char*>();
           const char *password = networkSetting["psk"].as<const char*>();
 
-          if (ssid != "null") {
+          if (ssid != "null" && ssid != "" && password != "") {
             wifiMulti.addAP(ssid, password);
             hasNetworkSettings = true;
           }
@@ -31,7 +40,7 @@ void setupWifi() {
         accesPointSSID = String(conf["ap"]["ssid"].as<String>());
         accesPointPassword = String(conf["ap"]["psk"].as<String>());
 
-        if (accesPointSSID == "null") {
+        if (accesPointSSID == "null" || accesPointSSID == "" || accesPointPassword == "") {
           accesPointSSID = DEFAULT_AP_SSID;
           accesPointPassword = DEFAULT_AP_PSK;
         }
@@ -41,10 +50,14 @@ void setupWifi() {
     } else {
       Serial.println("Error parsing conf.json");
       Serial.println(error.c_str());
+      createEmptyConfig();
     }
   } else {
     Serial.println("Could not open conf.json");
+    createEmptyConfig();
   }
+
+  conf.clear();
 
   // Connect to existing WiFi
   if (hasNetworkSettings) {
